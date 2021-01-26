@@ -17,13 +17,16 @@ function inferOption(option, defaultValue) {
 
 export default (options = {}) => {
   const filter = createFilter(options.include, options.exclude)
-  const postcssPlugins = Array.isArray(options.plugins) ?
-    options.plugins.filter(Boolean) :
-    options.plugins
+  const postcssPlugins = Array.isArray(options.plugins)
+    ? options.plugins.filter(Boolean)
+    : options.plugins
   const { sourceMap } = options
   const postcssLoaderOptions = {
     /** Inject CSS as `<style>` to `<head>` */
-    inject: typeof options.inject === 'function' ? options.inject : inferOption(options.inject, {}),
+    inject:
+      typeof options.inject === 'function'
+        ? options.inject
+        : inferOption(options.inject, {}),
     /** Extract CSS */
     extract: typeof options.extract === 'undefined' ? false : options.extract,
     /** CSS modules */
@@ -43,8 +46,8 @@ export default (options = {}) => {
       plugins: postcssPlugins,
       syntax: options.syntax,
       stringifier: options.stringifier,
-      exec: options.exec
-    }
+      exec: options.exec,
+    },
   }
   let use = ['sass', 'stylus', 'less']
   if (Array.isArray(options.use)) {
@@ -53,7 +56,7 @@ export default (options = {}) => {
     use = [
       ['sass', options.use.sass || {}],
       ['stylus', options.use.stylus || {}],
-      ['less', options.use.less || {}]
+      ['less', options.use.less || {}],
     ]
   }
 
@@ -62,7 +65,7 @@ export default (options = {}) => {
   const loaders = new Loaders({
     use,
     loaders: options.loaders,
-    extensions: options.extensions
+    extensions: options.extensions,
   })
 
   const extracted = new Map()
@@ -84,13 +87,13 @@ export default (options = {}) => {
         sourceMap,
         dependencies: new Set(),
         warn: this.warn.bind(this),
-        plugin: this
+        plugin: this,
       }
 
       const result = await loaders.process(
         {
           code,
-          map: undefined
+          map: undefined,
         },
         loaderContext
       )
@@ -103,46 +106,49 @@ export default (options = {}) => {
         extracted.set(id, result.extracted)
         return {
           code: result.code,
-          map: { mappings: '' }
+          map: { mappings: '' },
         }
       }
 
       return {
         code: result.code,
-        map: result.map || { mappings: '' }
+        map: result.map || { mappings: '' },
       }
     },
 
     augmentChunkHash() {
       if (extracted.size === 0) return
-      const extractedValue = [...extracted].reduce((object, [key, value]) => ({
-        ...object,
-        [key]: value
-      }), {})
+      const extractedValue = [...extracted].reduce(
+        (object, [key, value]) => ({
+          ...object,
+          [key]: value,
+        }),
+        {}
+      )
       return JSON.stringify(extractedValue)
     },
 
     async generateBundle(options_, bundle) {
-      if (
-        extracted.size === 0 ||
-        !(options_.dir || options_.file)
-      ) return
+      if (extracted.size === 0 || !(options_.dir || options_.file)) return
 
       // TODO: support `[hash]`
       const dir = options_.dir || path.dirname(options_.file)
 
-      const findEntry = id => Object.keys(bundle).find(chunkId => {
-        return bundle[chunkId].facadeModuleId === id
-      })
+      const findEntry = (id) =>
+        Object.keys(bundle).find((chunkId) => {
+          return bundle[chunkId].facadeModuleId === id
+        })
 
       const getExtracted = () => {
         const files = new Map()
+        const concatedCss = new Map()
         const concateEntry = (id, fileName) => {
           const { importedIds } = this.getModuleInfo(id)
 
           for (const id of importedIds) {
             if (extracted.has(id)) {
-              const concat = files.get(fileName) || new Concat(true, fileName, '\n')
+              const concat =
+                files.get(fileName) || new Concat(true, fileName, '\n')
               const result = extracted.get(id)
               const relative = normalizePath(path.relative(dir, result.id))
               const map = result.map || null
@@ -150,12 +156,15 @@ export default (options = {}) => {
                 map.file = fileName
               }
 
+              if (concatedCss.get(fileName + relative)) {
+                continue
+              }
+
+              concatedCss.set(fileName + relative, 1)
+
               concat.add(relative, result.code, map)
 
               files.has(fileName) || files.set(fileName, concat)
-              if (!files.has(fileName)) {
-                files.set(fileName, concat)
-              }
             } else {
               if (this.getModuleInfo(id).isEntry) {
                 continue
@@ -166,15 +175,22 @@ export default (options = {}) => {
           }
         }
 
-        const entries = [...this.moduleIds].filter(id => this.getModuleInfo(id).isEntry)
+        const entries = [...this.moduleIds].filter(
+          (id) => this.getModuleInfo(id).isEntry
+        )
 
         for (const entryId of entries) {
           const entry = findEntry(entryId)
-          let fileName = path.join(path.dirname(entry), `${path.basename(entry, path.extname(entry))}.css`)
+          let fileName = path.join(
+            path.dirname(entry),
+            `${path.basename(entry, path.extname(entry))}.css`
+          )
 
           if (typeof postcssLoaderOptions.extract === 'string') {
             if (path.isAbsolute(postcssLoaderOptions.extract)) {
-              fileName = normalizePath(path.relative(dir, postcssLoaderOptions.extract))
+              fileName = normalizePath(
+                path.relative(dir, postcssLoaderOptions.extract)
+              )
             } else {
               fileName = normalizePath(postcssLoaderOptions.extract)
             }
@@ -183,7 +199,7 @@ export default (options = {}) => {
           concateEntry(entryId, fileName)
         }
 
-        return [...files.keys()].map(file => {
+        return [...files.keys()].map((file) => {
           const concated = files.get(file)
           let code = concated.content
 
@@ -200,12 +216,12 @@ export default (options = {}) => {
             code,
             map: sourceMap === true && concated.sourceMap,
             codeFileName: file,
-            mapFileName: `${file}.map`
+            mapFileName: `${file}.map`,
           }
         })
       }
 
-      const bundleAsset = async asset => {
+      const bundleAsset = async (asset) => {
         if (options.onExtract) {
           const shouldExtract = await options.onExtract(() => asset)
           if (shouldExtract === false) {
@@ -236,18 +252,18 @@ export default (options = {}) => {
         this.emitFile({
           fileName: codeFileName,
           type: 'asset',
-          source: code
+          source: code,
         })
         if (map) {
           this.emitFile({
             fileName: mapFileName,
             type: 'asset',
-            source: map
+            source: map,
           })
         }
       }
 
-      await Promise.all(getExtracted().map(chunk => bundleAsset(chunk)))
-    }
+      await Promise.all(getExtracted().map((chunk) => bundleAsset(chunk)))
+    },
   }
 }

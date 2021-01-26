@@ -1,6 +1,6 @@
 {
-  "name": "@r2x/rollup-plugin-postcss",
-  "version": "3.0.1",
+  "name": "rollup-plugin-postcss",
+  "version": "3.0.2",
   "description": "Seamless integration between Rollup and PostCSS",
   "main": "dist/index.js",
   "types": "./types/index.d.ts",
