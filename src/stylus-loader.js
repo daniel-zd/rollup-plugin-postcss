@@ -18,9 +18,10 @@ export default {
 
     const css = await pify(style.render.bind(style))()
     const deps = style.deps()
-    for (const dep of deps) {
+
+    deps.forEach(dep => {
       this.dependencies.add(dep)
-    }
+    })
 
     return {
       code: css,

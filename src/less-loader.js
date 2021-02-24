@@ -17,9 +17,9 @@ export default {
       filename: this.id
     })
 
-    for (const dep of imports) {
+    imports.forEach(dep => {
       this.dependencies.add(dep)
-    }
+    })
 
     if (map) {
       map = JSON.parse(map)

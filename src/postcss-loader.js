@@ -133,19 +133,19 @@ export default {
 
     const result = await postcss(plugins).process(code, postcssOptions)
 
-    for (const message of result.messages) {
+    result.messages.forEach(message => {
       if (message.type === 'dependency') {
         this.dependencies.add(message.file)
       }
-    }
+    })
 
-    for (const warning of result.warnings()) {
+    result.warnings().forEach(warning => {
       if (!warning.message) {
         warning.message = warning.text
       }
 
       this.warn(warning)
-    }
+    })
 
     const outputMap = result.map && JSON.parse(result.map.toString())
     if (outputMap && outputMap.sources) {

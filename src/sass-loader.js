@@ -11,7 +11,7 @@ const workQueue = new PQueue({ concurrency: threadPoolSize - 1 })
 
 const moduleRe = /^~([a-z\d]|@).+/i
 
-const getUrlOfPartial = url => {
+const getUrlOfPartial = (url) => {
   const parsedUrl = path.parse(url)
   return `${parsedUrl.dir}${path.sep}_${parsedUrl.base}`
 }
@@ -45,12 +45,12 @@ export default {
 
               const options = {
                 basedir: path.dirname(importer),
-                extensions: ['.scss', '.sass', '.css']
+                extensions: ['.scss', '.sass', '.css'],
               }
-              const finishImport = id => {
+              const finishImport = (id) => {
                 done({
                   // Do not add `.css` extension in order to inline the file
-                  file: id.endsWith('.css') ? id.replace(/\.css$/, '') : id
+                  file: id.endsWith('.css') ? id.replace(/\.css$/, '') : id,
                 })
               }
 
@@ -62,7 +62,7 @@ export default {
               // Give precedence to importing a partial
               resolvePromise(partialUrl, options)
                 .then(finishImport)
-                .catch(error => {
+                .catch((error) => {
                   if (
                     error.code === 'MODULE_NOT_FOUND' ||
                     error.code === 'ENOENT'
@@ -74,29 +74,32 @@ export default {
                     next()
                   }
                 })
-            }
-          ].concat(this.options.importer || [])
+            },
+          ].concat(this.options.importer || []),
         })
-          .then(result => {
-            for (const file of result.stats.includedFiles) {
+          .then((result) => {
+            // for (const file of result.stats.includedFiles) { // TODO Type-002 数组
+            //   this.dependencies.add(file)
+            // }
+
+            result.stats.includedFiles.forEach((file) => {
               this.dependencies.add(file)
-            }
+            })
 
             resolve({
               code: result.css.toString(),
-              map: result.map && result.map.toString()
+              map: result.map && result.map.toString(),
             })
           })
           .catch(reject)
       )
     })
-  }
+  },
 }
 
 function loadSassOrThrow() {
-  // Loading one of the supported modules
-  for (const moduleId of sassModuleIds) {
-    const module = loadModule(moduleId)
+  for (let i = 0; i < sassModuleIds.length; i++) {
+    const module = loadModule(sassModuleIds[i])
     if (module) {
       return module
     }
@@ -105,7 +108,8 @@ function loadSassOrThrow() {
   // Throwing exception if module can't be loaded
   throw new Error(
     'You need to install one of the following packages: ' +
-    sassModuleIds.map(moduleId => `"${moduleId}"`).join(', ') + ' ' +
-    'in order to process SASS files'
+      sassModuleIds.map((moduleId) => `"${moduleId}"`).join(', ') +
+      ' ' +
+      'in order to process SASS files'
   )
 }

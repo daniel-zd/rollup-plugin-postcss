@@ -98,9 +98,13 @@ export default (options = {}) => {
         loaderContext
       )
 
-      for (const dep of loaderContext.dependencies) {
+      // for (const dep of loaderContext.dependencies) {
+      //   this.addWatchFile(dep)
+      // }
+
+      loaderContext.dependencies.forEach(dep => {
         this.addWatchFile(dep)
-      }
+      })
 
       if (postcssLoaderOptions.extract) {
         extracted.set(id, result.extracted)
@@ -145,41 +149,45 @@ export default (options = {}) => {
         const concateEntry = (id, fileName) => {
           const { importedIds } = this.getModuleInfo(id)
 
-          for (const id of importedIds) {
-            if (extracted.has(id)) {
-              const concat =
-                files.get(fileName) || new Concat(true, fileName, '\n')
-              const result = extracted.get(id)
-              const relative = normalizePath(path.relative(dir, result.id))
-              const map = result.map || null
-              if (map) {
-                map.file = fileName
+          for (const key in importedIds) {
+            if (importedIds.hasOwnProperty(key)) {
+              const id = importedIds[key]
+              if (extracted.has(id)) {
+                const concat =
+                  files.get(fileName) || new Concat(true, fileName, '\n')
+                const result = extracted.get(id)
+                const relative = normalizePath(path.relative(dir, result.id))
+                const map = result.map || null
+                if (map) {
+                  map.file = fileName
+                }
+  
+                if (concatedCss.get(fileName + relative)) {
+                  continue
+                }
+  
+                concatedCss.set(fileName + relative, 1)
+  
+                concat.add(relative, result.code, map)
+  
+                files.has(fileName) || files.set(fileName, concat)
+              } else {
+                if (this.getModuleInfo(id).isEntry) {
+                  continue
+                }
+  
+                concateEntry(id, fileName)
               }
-
-              if (concatedCss.get(fileName + relative)) {
-                continue
-              }
-
-              concatedCss.set(fileName + relative, 1)
-
-              concat.add(relative, result.code, map)
-
-              files.has(fileName) || files.set(fileName, concat)
-            } else {
-              if (this.getModuleInfo(id).isEntry) {
-                continue
-              }
-
-              concateEntry(id, fileName)
             }
           }
+          
         }
 
         const entries = [...this.moduleIds].filter(
           (id) => this.getModuleInfo(id).isEntry
         )
 
-        for (const entryId of entries) {
+        entries.forEach(entryId => {
           const entry = findEntry(entryId)
           let fileName = path.join(
             path.dirname(entry),
@@ -197,7 +205,7 @@ export default (options = {}) => {
           }
 
           concateEntry(entryId, fileName)
-        }
+        })
 
         return [...files.keys()].map((file) => {
           const concated = files.get(file)
